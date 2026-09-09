@@ -1,0 +1,34 @@
+<!doctype html><html lang="fr"><head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="apple-mobile-web-app-capable" content="yes"><title>🎯 Ma dictée</title>
+<style>
+body{margin:0;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;background:linear-gradient(180deg,#eef3ff,#f8fbff);color:#172033}
+.app{max-width:620px;margin:auto;padding:22px 16px 36px}.card{background:#fff;border-radius:25px;padding:20px;box-shadow:0 10px 30px #dce2f0}
+h1{text-align:center;font-size:32px;margin:5px}.sub{text-align:center;color:#68738a}.top{display:flex;justify-content:space-between;font-weight:800}.badge{background:#eef1ff;border-radius:20px;padding:7px 12px}
+.progress{height:10px;background:#e6e9f0;border-radius:9px;margin:15px 0 24px}.bar{height:100%;width:0;background:#6c63ff;transition:.3s}
+.instruction{text-align:center;font-size:20px;font-weight:800}.hint{text-align:center;background:#f5f7fb;border-radius:18px;padding:20px;margin:16px 0}.icon{font-size:42px}
+button{width:100%;border:0;border-radius:16px;padding:15px;font-size:19px;font-weight:800;margin-top:12px}.play{background:#172033;color:#fff;font-size:22px;padding:18px}.primary{background:#6c63ff;color:#fff}.secondary{background:#edf0f6;color:#263149}
+input{width:100%;padding:16px;border:2px solid #dce1eb;border-radius:17px;font-size:25px;text-align:center;box-sizing:border-box;outline:0}
+.feedback{text-align:center;border-radius:18px;padding:15px;margin-top:14px;font-size:20px;font-weight:800}.good{background:#e7f8ed;color:#16713c}.bad{background:#fff0ef;color:#a33a30}
+.solution{font-size:25px;margin-top:7px}.hidden{display:none}.result{text-align:center}.score{font-size:52px;font-weight:900}.stars{font-size:32px}.review{text-align:left;background:#f5f6fa;border-radius:16px;padding:14px;margin-top:18px}.review div{padding:9px 0;border-bottom:1px solid #ddd}.status{text-align:center;font-size:14px;color:#68738a;margin-top:9px;min-height:20px}
+</style></head><body><div class="app"><h1>🎯 Ma dictée</h1><p class="sub">Écris les 5 mots sans faute !</p>
+<div id="game" class="card"><div class="top"><span id="counter"></span><span class="badge">⭐ <span id="score">0</span></span></div>
+<div class="progress"><div id="bar" class="bar"></div></div><div class="instruction">Appuie sur PLAY pour écouter le mot 👂</div>
+<div class="hint"><div class="icon">🔊</div><button class="play" id="play">▶️ PLAY</button><div id="status" class="status">Tu peux réécouter le mot autant de fois que nécessaire.</div></div>
+<input id="answer" autocomplete="off" autocapitalize="none" spellcheck="false" placeholder="Écris le mot ici…">
+<button class="primary" id="check">✅ Vérifier</button><div id="feedback"></div><button class="secondary hidden" id="next">➡️ Mot suivant</button></div>
+<div id="result" class="card result hidden"><h2>🏆 Dictée terminée !</h2><div id="final" class="score"></div><div id="stars" class="stars"></div><p id="msg"></p><div id="review" class="review"></div><button class="primary" id="restart">🔄 Refaire</button></div></div>
+<script>
+const words=["l’accueil","s’occuper","d’accord","cinq","le coq"];let i=0,score=0,errors=[],voices=[];
+const a=document.getElementById('answer'),f=document.getElementById('feedback'),n=document.getElementById('next'),status=document.getElementById('status');
+function norm(s){return s.trim().toLocaleLowerCase('fr-FR').replace(/[’]/g,"'").replace(/\s+/g," ")}
+function chooseVoice(){voices=speechSynthesis.getVoices();return voices.find(v=>v.lang&&v.lang.toLowerCase().startsWith('fr-be'))||voices.find(v=>v.lang&&v.lang.toLowerCase().startsWith('fr-fr'))||voices.find(v=>v.lang&&v.lang.toLowerCase().startsWith('fr'))||null}
+function speak(){if(!('speechSynthesis' in window)){status.textContent='La lecture vocale n’est pas disponible.';return}speechSynthesis.cancel();let u=new SpeechSynthesisUtterance(words[i]);u.lang='fr-FR';u.rate=.82;let v=chooseVoice();if(v)u.voice=v;u.onstart=()=>status.textContent='🔊 Lecture en cours…';u.onend=()=>status.textContent='Tu peux réécouter si nécessaire.';speechSynthesis.speak(u)}
+function load(){a.value='';a.disabled=false;f.innerHTML='';f.className='';f.style.display='none';n.classList.add('hidden');document.getElementById('counter').textContent='Mot '+(i+1)+' / '+words.length;document.getElementById('score').textContent=score;document.getElementById('bar').style.width=(i/words.length*100)+'%';status.textContent='Tu peux réécouter le mot autant de fois que nécessaire.';setTimeout(()=>a.focus(),100)}
+function check(){if(a.disabled)return;if(!a.value.trim()){a.focus();return}a.disabled=true;f.style.display='block';if(norm(a.value)===norm(words[i])){score++;f.className='feedback good';f.innerHTML='🎉 Bravo !<div class="solution">'+words[i]+'</div>'}else{errors.push([words[i],a.value.trim()]);f.className='feedback bad';f.innerHTML='❌ À revoir<div class="solution">'+words[i]+'</div>'}document.getElementById('score').textContent=score;n.classList.remove('hidden')}
+function nextWord(){i++;if(i<words.length)load();else finish()}
+function esc(s){return s.replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#039;'}[m]))}
+function finish(){speechSynthesis.cancel();document.getElementById('game').classList.add('hidden');document.getElementById('result').classList.remove('hidden');document.getElementById('final').textContent=score+' / '+words.length;document.getElementById('stars').textContent=score===5?'⭐⭐⭐⭐⭐':score>=4?'⭐⭐⭐⭐':score>=3?'⭐⭐⭐':score>=2?'⭐⭐':'⭐';document.getElementById('msg').textContent=score===5?'🌟 Sans faute ! Excellent !':score>=4?'👏 Presque parfait !':'💪 On recommence pour progresser !';document.getElementById('review').innerHTML=errors.length?'<b>À revoir :</b>'+errors.map(x=>'<div><b>'+esc(x[0])+'</b><br>Tu as écrit : '+esc(x[1])+'</div>').join(''):'🎉 Aucune faute !'}
+function start(){i=0;score=0;errors=[];document.getElementById('game').classList.remove('hidden');document.getElementById('result').classList.add('hidden');load()}
+document.getElementById('play').onclick=speak;document.getElementById('check').onclick=check;a.onkeydown=e=>{if(e.key==='Enter')check()};n.onclick=nextWord;document.getElementById('restart').onclick=start;if('speechSynthesis'in window)speechSynthesis.onvoiceschanged=chooseVoice;start();
+</script></body></html>
