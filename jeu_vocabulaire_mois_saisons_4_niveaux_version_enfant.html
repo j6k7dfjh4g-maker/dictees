@@ -1,0 +1,117 @@
+<!doctype html><html lang="fr"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Orthomémo – Mois et saisons</title>
+<style>
+*{box-sizing:border-box}
+body{margin:0;padding:18px;background:linear-gradient(145deg,#fff3c9 0%,#ffe2ed 48%,#dff4ff 100%);color:#293451;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;min-height:100vh}
+.wrap{max-width:650px;margin:auto}
+header{text-align:center;padding:8px 8px 18px}
+h1{font-size:32px;margin:6px 0;color:#6846a5;letter-spacing:.2px}
+.sub{font-size:16px;color:#596681;margin:0}
+.stars{font-size:25px;letter-spacing:8px;margin-bottom:5px}
+.levels{display:grid;grid-template-columns:repeat(2,1fr);gap:10px;margin-bottom:16px}
+.level{border:3px solid #fff;border-radius:17px;padding:14px 8px;background:#fff;color:#51456f;font-weight:800;font-size:16px;box-shadow:0 4px 0 #d8c9e9}
+.level.active{background:#7954bd!important;color:white!important;border-color:#fff!important;box-shadow:0 4px 0 #56378f}
+.panel{background:#fff;border:3px solid #fff;border-radius:24px;padding:22px;box-shadow:0 8px 22px #66518a20}
+.progress{display:inline-block;background:#f0e9ff;color:#6546a0;border-radius:20px;padding:8px 13px;font-size:14px;font-weight:800}
+.prompt{text-align:center;font-size:20px;font-weight:800;margin:20px 0 16px}
+.play{width:100%;border:0;border-radius:17px;padding:17px;background:linear-gradient(135deg,#23a889,#16866f);color:white;font-size:21px;font-weight:900;margin-bottom:14px;box-shadow:0 5px 0 #08705c}
+input{width:100%;font-size:21px;padding:15px;border:3px solid #d9d2e9;border-radius:15px;background:#fcfbff;color:#293451;text-align:center}
+input:focus{outline:3px solid #e8dcff;border-color:#9675d2}
+.action{width:100%;border:0;border-radius:15px;padding:15px;margin-top:13px;background:#ffad42;color:#59340a;font-size:18px;font-weight:900;box-shadow:0 4px 0 #df8522}
+.next{background:#7954bd;color:white;box-shadow:0 4px 0 #56378f;display:none}
+.feedback{min-height:30px;text-align:center;margin-top:14px;font-weight:800;font-size:17px}
+.small{text-align:center;color:#778098;font-size:13px;line-height:1.5;margin-top:16px}
+.hidden{display:none}
+.result{text-align:center;font-size:25px;font-weight:900;color:#6846a5}
+.review-title{font-weight:900;color:#6846a5;margin:18px 0 8px}
+.mistake{background:#fff3f1;border:2px solid #ffd4cd;border-radius:13px;padding:11px;margin:8px 0;font-size:15px;line-height:1.45}
+.good{color:#16866f;font-weight:900}
+.bad{color:#bd4d48;text-decoration:line-through}
+.perfect{background:#e8fff5;border-radius:14px;padding:14px;text-align:center;font-weight:800;color:#13795f}
+@media(max-width:390px){body{padding:12px}.panel{padding:16px}h1{font-size:28px}.level{font-size:14px}}
+</style></head><body><main class="wrap"><h1>Orthomémo</h1><p class="sub">Les mois de l’année et les saisons</p>
+<div class="levels"><button class="level active" data-level="1">Niveau 1</button><button class="level" data-level="2">Niveau 2</button><button class="level" data-level="3">Niveau 3</button><button class="level" data-level="4">Niveau 4 · Défi final</button></div>
+<section class="panel" id="game"><div class="progress" id="progress"></div><div class="prompt">Écoute le mot, puis écris-le correctement.</div><button class="play" id="play">▶ ÉCOUTER</button><input id="answer" autocomplete="off" autocapitalize="none" spellcheck="false" placeholder="Écris le mot ici"><button class="action" id="verify">Vérifier</button><button class="action next" id="next">Mot suivant</button><div class="feedback" id="feedback" aria-live="polite"></div><div class="small">Tu peux réécouter chaque mot autant de fois que nécessaire. Les mots ne sont pas affichés avant ta réponse.</div></section>
+<section class="panel hidden" id="finished"><p class="result" id="result"></p><p id="summary"></p><div id="mistakes"></div><button class="action" id="restart">Recommencer ce niveau</button></section></main>
+<script>
+const lists={"1": ["janvier", "février", "mars", "avril", "mai", "juin"], "2": ["juillet", "août", "septembre", "octobre", "novembre", "décembre"], "3": ["le printemps", "l’été", "l’automne", "l’hiver"], "4": ["janvier", "février", "mars", "avril", "mai", "juin", "juillet", "août", "septembre", "octobre", "novembre", "décembre", "le printemps", "l’été", "l’automne", "l’hiver"]};
+let level="1",items=[],index=0,score=0,checked=false,mistakes=[];
+const $=id=>document.getElementById(id);
+const norm=t=>t.toLocaleLowerCase("fr").normalize("NFC").trim().replace(/\s+/g," ");
+function start(l){
+ level=l;items=[...lists[l]].sort(()=>Math.random()-.5);index=0;score=0;mistakes=[];
+ document.querySelectorAll(".level").forEach(b=>b.classList.toggle("active",b.dataset.level===l));
+ $("game").classList.remove("hidden");$("finished").classList.add("hidden");update();
+}
+function update(){
+ $("progress").textContent=`⭐ Mot ${index+1} sur ${items.length} · Score : ${score}`;
+ $("answer").value="";$("answer").disabled=false;$("feedback").textContent="";
+ $("verify").style.display="block";$("next").style.display="none";checked=false;$("answer").focus();
+}
+function speak(){
+ const fb=$("feedback");
+ if(!("speechSynthesis"in window)||!("SpeechSynthesisUtterance"in window)){fb.textContent="Audio non pris en charge. Essaie d’ouvrir le jeu dans Safari.";return;}
+ const synth=window.speechSynthesis;
+ try{
+  synth.cancel();const u=new SpeechSynthesisUtterance(items[index]);u.lang="fr-FR";u.rate=.78;u.pitch=1;u.volume=1;
+  const choose=()=>{const vs=synth.getVoices();u.voice=vs.find(v=>v.lang.toLowerCase()==="fr-be")||vs.find(v=>v.lang.toLowerCase().startsWith("fr-fr"))||vs.find(v=>v.lang.toLowerCase().startsWith("fr"))||null;};
+  choose();u.onstart=()=>{fb.textContent="🔊 Écoute bien…";fb.style.color="#247b61";};
+  u.onend=()=>{if(!checked)fb.textContent="Tu peux réécouter le mot.";};
+  u.onerror=e=>{fb.textContent="Erreur audio ("+(e.error||"lecture impossible")+"). Vérifie le volume de l’iPhone.";fb.style.color="#b33";};
+  setTimeout(()=>{try{synth.resume();choose();synth.speak(u);}catch(e){fb.textContent="Impossible de lancer le son. Essaie dans Safari.";}},120);
+ }catch(e){fb.textContent="Impossible de lancer la lecture audio. Essaie dans Safari.";}
+}
+function happySound(){
+ // Petit carillon joyeux généré directement par le navigateur, sans fichier audio externe.
+ try{
+  const AudioCtx=window.AudioContext||window.webkitAudioContext;
+  if(!AudioCtx)return;
+  const ctx=new AudioCtx();
+  if(ctx.state==="suspended")ctx.resume();
+  const now=ctx.currentTime;
+  [523.25,659.25,783.99,1046.5].forEach((freq,i)=>{
+   const osc=ctx.createOscillator(),gain=ctx.createGain(),t=now+i*.105;
+   osc.type="sine";osc.frequency.setValueAtTime(freq,t);
+   gain.gain.setValueAtTime(.0001,t);gain.gain.exponentialRampToValueAtTime(.18,t+.018);
+   gain.gain.exponentialRampToValueAtTime(.0001,t+.34);
+   osc.connect(gain);gain.connect(ctx.destination);osc.start(t);osc.stop(t+.36);
+  });
+  setTimeout(()=>ctx.close(),900);
+ }catch(e){}
+}
+function check(){
+ if(checked)return;
+ const typed=$("answer").value;
+ const ok=norm(typed)===norm(items[index]);checked=true;
+ if(ok){score++;$("feedback").textContent="🎉 Bravo ! Super réponse !";$("feedback").style.color="#16866f";happySound();}
+ else{mistakes.push({typed:typed.trim()||"(aucune réponse)",correct:items[index]});$("feedback").textContent="💪 Pas grave, on apprend ! La bonne réponse est : "+items[index];$("feedback").style.color="#bd4d48";}
+ $("answer").disabled=true;$("verify").style.display="none";$("next").style.display="block";
+ $("next").textContent=index===items.length-1?"Voir mon bilan ⭐":"Mot suivant ➜";
+ $("progress").textContent=`⭐ Mot ${index+1} sur ${items.length} · Score : ${score}`;
+}
+function advance(){
+ if(index<items.length-1){index++;update();return;}
+ $("game").classList.add("hidden");$("finished").classList.remove("hidden");
+ $("result").textContent=`🏆 ${score} / ${items.length}`;
+ $("summary").textContent=mistakes.length===0?"Bravo ! Aucune faute : tu as tout réussi ! 🌟":`Tu as fait ${mistakes.length} faute${mistakes.length>1?"s":""}. Regarde les corrections ci-dessous pour progresser.`;
+ const box=$("mistakes");box.innerHTML="";
+ if(mistakes.length===0){const div=document.createElement("div");div.className="perfect";div.textContent="🎉 Un sans-faute ! Continue comme ça !";box.appendChild(div);}
+ else{
+  const title=document.createElement("p");title.className="review-title";title.textContent="📝 Tes mots à revoir";box.appendChild(title);
+  mistakes.forEach((m,i)=>{
+   const row=document.createElement("div");row.className="mistake";
+   const n=document.createElement("strong");n.textContent=`${i+1}. `;
+   const label=document.createTextNode("Ta réponse : ");
+   const bad=document.createElement("span");bad.className="bad";bad.textContent=m.typed;
+   const br=document.createElement("br");
+   const goodLabel=document.createTextNode("Bonne orthographe : ");
+   const good=document.createElement("span");good.className="good";good.textContent=m.correct;
+   row.append(n,label,bad,br,goodLabel,good);box.appendChild(row);
+  });
+ }
+}
+document.querySelectorAll(".level").forEach(b=>b.addEventListener("click",()=>start(b.dataset.level)));
+$("play").addEventListener("click",speak);$("verify").addEventListener("click",check);
+$("next").addEventListener("click",advance);$("restart").addEventListener("click",()=>start(level));
+$("answer").addEventListener("keydown",e=>{if(e.key==="Enter"){if(checked)advance();else check();}});
+start("1");
+</script></body></html>
